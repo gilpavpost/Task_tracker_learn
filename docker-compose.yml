@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # MySQL база данных
+  mysql:
+    image: mysql:8.0
+    container_name: tasktracker-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: tasktracker
+      MYSQL_USER: tasktracker
+      MYSQL_PASSWORD: tasktracker123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - tasktracker-network
+
+  # Node.js приложение
+  app:
+    build: .
+    container_name: tasktracker-app
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_USER: tasktracker
+      DB_PASSWORD: tasktracker123
+      DB_NAME: tasktracker
+      JWT_SECRET: your_super_secret_jwt_key_change_this_in_production
+      PORT: 5000
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mysql
+    networks:
+      - tasktracker-network
+    volumes:
+      - ./uploads:/app/uploads
+
+volumes:
+  mysql_data:
+
+networks:
+  tasktracker-network:
+    driver: bridge 
