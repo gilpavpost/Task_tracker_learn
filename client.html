@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>TaskTracker Client</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+    .container { max-width: 400px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 24px; }
+    h2 { text-align: center; }
+    form { display: flex; flex-direction: column; gap: 12px; }
+    input[type="email"], input[type="password"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 10px; background: #1976d2; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #1565c0; }
+    .error { color: #d32f2f; text-align: center; margin-bottom: 10px; }
+    .tasks { margin-top: 20px; }
+    .task { background: #f1f8e9; margin-bottom: 10px; padding: 10px; border-radius: 4px; }
+    .logout { float: right; background: #d32f2f; margin-top: -10px; }
+    .logout:hover { background: #b71c1c; }
+  </style>
+</head>
+<body>
+  <div class="container" id="app"></div>
+  <script>
+    const API_URL = 'http://localhost:5000/api';
+
+    function setToken(token) {
+      localStorage.setItem('jwt', token);
+    }
+    function getToken() {
+      return localStorage.getItem('jwt');
+    }
+    function clearToken() {
+      localStorage.removeItem('jwt');
+    }
+
+    function renderLogin(error = '') {
+      document.getElementById('app').innerHTML = `
+        <h2>Вход</h2>
+        ${error ? `<div class="error">${error}</div>` : ''}
+        <form id="login-form">
+          <input type="email" name="email" placeholder="Email" required />
+          <input type="password" name="password" placeholder="Пароль" required />
+          <button type="submit">Войти</button>
+        </form>
+      `;
+      document.getElementById('login-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const email = e.target.email.value;
+        const password = e.target.password.value;
+        try {
+          const res = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.message || 'Ошибка входа');
+          }
+          const data = await res.json();
+          setToken(data.token);
+          renderTasks();
+        } catch (err) {
+          renderLogin(err.message);
+        }
+      };
+    }
+
+    async function renderTasks() {
+      const token = getToken();
+      if (!token) return renderLogin();
+      document.getElementById('app').innerHTML = '<h2>Загрузка задач...</h2>';
+      try {
+        const res = await fetch(`${API_URL}/tasks`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.status === 401) {
+          clearToken();
+          return renderLogin('Сессия истекла, войдите снова');
+        }
+        if (!res.ok) throw new Error('Ошибка загрузки задач');
+        const tasks = await res.json();
+        document.getElementById('app').innerHTML = `
+          <button class="logout" onclick="logout()">Выйти</button>
+          <h2>Мои задачи</h2>
+          <div class="tasks">
+            ${tasks.length === 0 ? '<div>Нет задач</div>' : tasks.map(task => `
+              <div class="task">
+                <b>${task.title}</b><br/>
+                <small>${task.status} | до ${task.due_date || '-'}</small><br/>
+                <div>${task.description || ''}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } catch (err) {
+        document.getElementById('app').innerHTML = `<div class="error">${err.message}</div>`;
+      }
+    }
+
+    function logout() {
+      clearToken();
+      renderLogin();
+    }
+
+    // Автоматический рендер
+    if (getToken()) {
+      renderTasks();
+    } else {
+      renderLogin();
+    }
+    // Для глобального доступа logout
+    window.logout = logout;
+  </script>
+</body>
+</html> 
