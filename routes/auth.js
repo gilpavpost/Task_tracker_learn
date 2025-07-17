@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login } = require('../controllers/auth');
+const { register, login, requestPasswordReset, resetPassword } = require('../controllers/auth');
 
 /**
  * @swagger
@@ -67,5 +67,54 @@ router.post('/register', register);
  *         description: Неверные учетные данные
  */
 router.post('/login', login);
+
+/**
+ * @swagger
+ * /api/auth/reset-request:
+ *   post:
+ *     summary: Запросить сброс пароля
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Токен для сброса пароля сгенерирован
+ */
+router.post('/reset-request', requestPasswordReset);
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Сбросить пароль по токену
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - password
+ *             properties:
+ *               token:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Пароль успешно сброшен
+ */
+router.post('/reset-password', resetPassword);
 
 module.exports = router;

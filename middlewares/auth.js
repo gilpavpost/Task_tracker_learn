@@ -23,10 +23,20 @@ const auth = async (req, res, next) => {
     }
 
     req.userId = decoded.userId;
+    req.userRole = decoded.role || users[0].role;
+    req.user = users[0];
     next();
   } catch (error) {
     res.status(401).json({ message: 'Not authorized', error: error.message });
   }
 };
 
-module.exports = auth;
+// Middleware для проверки роли
+const requireRole = (...roles) => (req, res, next) => {
+  if (!roles.includes(req.userRole)) {
+    return res.status(403).json({ message: 'Forbidden: insufficient rights' });
+  }
+  next();
+};
+
+module.exports = { auth, requireRole };

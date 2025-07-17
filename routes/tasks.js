@@ -5,8 +5,24 @@ const {
   getAllTasks,
   createTask,
   updateTask,
-  deleteTask
+  deleteTask,
+  getTaskHistory,
+  getTaskFiles,
+  uploadTaskFile
 } = require('../controllers/tasks');
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, '../uploads'));
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
+  }
+});
+const upload = multer({ storage });
 
 /**
  * @swagger
@@ -23,6 +39,34 @@ const {
  *     tags: [Tasks]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Фильтр по статусу задачи
+ *       - in: query
+ *         name: assigned_to
+ *         schema:
+ *           type: integer
+ *         description: Фильтр по исполнителю
+ *       - in: query
+ *         name: project_id
+ *         schema:
+ *           type: integer
+ *         description: Фильтр по проекту
+ *       - in: query
+ *         name: due_from
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Дата дедлайна от (включительно)
+ *       - in: query
+ *         name: due_to
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Дата дедлайна до (включительно)
  *     responses:
  *       200:
  *         description: Список задач
@@ -134,5 +178,75 @@ router.put('/:id', auth, updateTask);
  *         description: Задача не найдена или нет доступа
  */
 router.delete('/:id', auth, deleteTask);
+
+/**
+ * @swagger
+ * /api/tasks/{id}/history:
+ *   get:
+ *     summary: Получить историю изменений задачи
+ *     tags: [Tasks]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID задачи
+ *     responses:
+ *       200:
+ *         description: История изменений задачи
+ */
+router.get('/:id/history', auth, getTaskHistory);
+
+/**
+ * @swagger
+ * /api/tasks/{taskId}/files:
+ *   get:
+ *     summary: Получить все файлы задачи
+ *     tags: [Tasks]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID задачи
+ *     responses:
+ *       200:
+ *         description: Список файлов задачи
+ */
+router.get('/:taskId/files', auth, getTaskFiles);
+
+/**
+ * @swagger
+ * /api/tasks/{taskId}/files:
+ *   post:
+ *     summary: Загрузить файл для задачи
+ *     tags: [Tasks]
+ *     security:
+ *       - bearerAuth: []
+ *     consumes:
+ *       - multipart/form-data
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID задачи
+ *       - in: formData
+ *         name: file
+ *         type: file
+ *         required: true
+ *         description: Файл для загрузки
+ *     responses:
+ *       201:
+ *         description: Файл загружен
+ */
+router.post('/:taskId/files', auth, upload.single('file'), uploadTaskFile);
 
 module.exports = router;
