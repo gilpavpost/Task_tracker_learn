@@ -1,0 +1,331 @@
+{
+  "info": {
+    "_postman_id": "tasktracker-collection-001",
+    "name": "TaskTracker API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/auth/register", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "register"] }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/auth/login", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Request Password Reset",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/auth/reset-request", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "reset-request"] }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"<reset_token>\",\n  \"password\": \"newpassword123\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/auth/reset-password", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "reset-password"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "Get All Tasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" }
+            ],
+            "url": { "raw": "http://localhost:3000/api/tasks", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "tasks"] }
+          }
+        },
+        {
+          "name": "Search Tasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" }
+            ],
+            "url": { "raw": "http://localhost:3000/api/tasks/search?q=текст", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "tasks", "search"], "query": [{"key": "q", "value": "текст"}] }
+          }
+        },
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Задача\",\n  \"description\": \"Описание\",\n  \"project_id\": 1\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/tasks", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "tasks"] }
+          }
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Обновленная задача\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/tasks/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "tasks", "1"] }
+          }
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" }
+            ],
+            "url": { "raw": "http://localhost:3000/api/tasks/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "tasks", "1"] }
+          }
+        },
+        {
+          "name": "Get Task History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" }
+            ],
+            "url": { "raw": "http://localhost:3000/api/tasks/1/history", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "tasks", "1", "history"] }
+          }
+        },
+        {
+          "name": "Get Task Files",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" }
+            ],
+            "url": { "raw": "http://localhost:3000/api/tasks/1/files", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "tasks", "1", "files"] }
+          }
+        },
+        {
+          "name": "Upload Task File",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "http://localhost:3000/api/tasks/1/files", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "tasks", "1", "files"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "Get All Projects",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" }
+            ],
+            "url": { "raw": "http://localhost:3000/api/projects", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "projects"] }
+          }
+        },
+        {
+          "name": "Create Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Проект\",\n  \"description\": \"Описание\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/projects", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "projects"] }
+          }
+        },
+        {
+          "name": "Update Project",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Обновленный проект\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/projects/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "projects", "1"] }
+          }
+        },
+        {
+          "name": "Delete Project",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" }
+            ],
+            "url": { "raw": "http://localhost:3000/api/projects/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "projects", "1"] }
+          }
+        },
+        {
+          "name": "Get Project Tasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" }
+            ],
+            "url": { "raw": "http://localhost:3000/api/projects/1/tasks", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "projects", "1", "tasks"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" }
+            ],
+            "url": { "raw": "http://localhost:3000/api/users/profile", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "profile"] }
+          }
+        },
+        {
+          "name": "Get Users (admin/manager)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" }
+            ],
+            "url": { "raw": "http://localhost:3000/api/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users"] }
+          }
+        },
+        {
+          "name": "Change User Role (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"manager\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/users/2/role", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "2", "role"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Comments",
+      "item": [
+        {
+          "name": "Get Comments for Task",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" }
+            ],
+            "url": { "raw": "http://localhost:3000/api/comments/task/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "comments", "task", "1"] }
+          }
+        },
+        {
+          "name": "Add Comment to Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Комментарий\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/comments/task/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "comments", "task", "1"] }
+          }
+        },
+        {
+          "name": "Update Comment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Обновленный комментарий\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/comments/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "comments", "1"] }
+          }
+        },
+        {
+          "name": "Delete Comment",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer <token>" }
+            ],
+            "url": { "raw": "http://localhost:3000/api/comments/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "comments", "1"] }
+          }
+        }
+      ]
+    }
+  ]
+} 
