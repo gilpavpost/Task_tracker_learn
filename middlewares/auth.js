@@ -39,4 +39,10 @@ const requireRole = (...roles) => (req, res, next) => {
   next();
 };
 
-module.exports = { auth, requireRole };
+module.exports = auth;
+module.exports.requireRole = (...roles) => (req, res, next) => {
+  if (!roles.includes(req.userRole)) {
+    return res.status(403).json({ message: 'Forbidden: insufficient rights' });
+  }
+  next();
+};
