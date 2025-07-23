@@ -4,26 +4,26 @@ const path = require('path');
 const getAllTasks = async (req, res) => {
   try {
     const { status, assigned_to, project_id, due_from, due_to } = req.query;
-    let query = 'SELECT * FROM tasks WHERE (created_by = ? OR assigned_to = ?)';
+    let query = `SELECT t.*, u.username as assigned_to_username FROM tasks t LEFT JOIN users u ON t.assigned_to = u.id WHERE (t.created_by = ? OR t.assigned_to = ?)`;
     const params = [req.userId, req.userId];
     if (status) {
-      query += ' AND status = ?';
+      query += ' AND t.status = ?';
       params.push(status);
     }
     if (assigned_to) {
-      query += ' AND assigned_to = ?';
+      query += ' AND t.assigned_to = ?';
       params.push(assigned_to);
     }
     if (project_id) {
-      query += ' AND project_id = ?';
+      query += ' AND t.project_id = ?';
       params.push(project_id);
     }
     if (due_from) {
-      query += ' AND due_date >= ?';
+      query += ' AND t.due_date >= ?';
       params.push(due_from);
     }
     if (due_to) {
-      query += ' AND due_date <= ?';
+      query += ' AND t.due_date <= ?';
       params.push(due_to);
     }
     const [tasks] = await pool.query(query, params);
@@ -200,6 +200,25 @@ const searchTasks = async (req, res) => {
   }
 };
 
+const getTaskById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [tasks] = await pool.query(
+      `SELECT t.*, u.username as assigned_to_username
+       FROM tasks t
+       LEFT JOIN users u ON t.assigned_to = u.id
+       WHERE t.id = ? AND (t.created_by = ? OR t.assigned_to = ?)`,
+      [id, req.userId, req.userId]
+    );
+    if (tasks.length === 0) {
+      return res.status(404).json({ message: 'Task not found or access denied' });
+    }
+    res.json(tasks[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching task', error: error.message });
+  }
+};
+
 module.exports = {
   getAllTasks,
   createTask,
@@ -208,5 +227,6 @@ module.exports = {
   getTaskHistory,
   getTaskFiles,
   uploadTaskFile,
-  searchTasks // добавляем экспорт
+  searchTasks, // добавляем экспорт
+  getTaskById // добавляем экспорт
 };

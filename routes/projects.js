@@ -6,7 +6,8 @@ const {
   createProject,
   updateProject,
   deleteProject,
-  getProjectTasks
+  getProjectTasks,
+  getProjectById
 } = require('../controllers/projects');
 
 /**
@@ -118,7 +119,7 @@ router.delete('/:id', auth, deleteProject);
  * @swagger
  * /api/projects/{id}/tasks:
  *   get:
- *     summary: Получить задачи проекта
+ *     summary: Получить задачи по проекту
  *     tags: [Projects]
  *     security:
  *       - bearerAuth: []
@@ -136,5 +137,28 @@ router.delete('/:id', auth, deleteProject);
  *         description: Проект не найден или нет доступа
  */
 router.get('/:id/tasks', auth, getProjectTasks);
+
+/**
+ * @swagger
+ * /api/projects/{id}:
+ *   get:
+ *     summary: Получить проект по ID
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID проекта
+ *     responses:
+ *       200:
+ *         description: Данные проекта
+ *       404:
+ *         description: Проект не найден или нет доступа
+ */
+router.get('/:id', auth, getProjectById);
 
 module.exports = router;

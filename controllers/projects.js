@@ -3,7 +3,10 @@ const pool = require('../config/db');
 const getAllProjects = async (req, res) => {
   try {
     const [projects] = await pool.query(
-      'SELECT * FROM projects WHERE created_by = ?',
+      `SELECT p.*, u.username as created_by_username
+       FROM projects p
+       LEFT JOIN users u ON p.created_by = u.id
+       WHERE p.created_by = ?`,
       [req.userId]
     );
     res.json(projects);
@@ -114,10 +117,30 @@ const getProjectTasks = async (req, res) => {
   }
 };
 
+const getProjectById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [project] = await pool.query(
+      `SELECT p.*, u.username as created_by_username
+       FROM projects p
+       LEFT JOIN users u ON p.created_by = u.id
+       WHERE p.id = ? AND p.created_by = ?`,
+      [id, req.userId]
+    );
+    if (project.length === 0) {
+      return res.status(404).json({ message: 'Project not found or access denied' });
+    }
+    res.json(project[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching project', error: error.message });
+  }
+};
+
 module.exports = {
   getAllProjects,
   createProject,
   updateProject,
   deleteProject,
-  getProjectTasks
+  getProjectTasks,
+  getProjectById
 };

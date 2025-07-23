@@ -9,7 +9,8 @@ const {
   getTaskHistory,
   getTaskFiles,
   uploadTaskFile,
-  searchTasks
+  searchTasks,
+  getTaskById
 } = require('../controllers/tasks');
 const multer = require('multer');
 const path = require('path');
@@ -270,5 +271,28 @@ router.post('/:taskId/files', auth, upload.single('file'), uploadTaskFile);
  *         description: Список найденных задач
  */
 router.get('/search', auth, searchTasks);
+
+/**
+ * @swagger
+ * /api/tasks/{id}:
+ *   get:
+ *     summary: Получить задачу по ID
+ *     tags: [Tasks]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID задачи
+ *     responses:
+ *       200:
+ *         description: Данные задачи
+ *       404:
+ *         description: Задача не найдена или нет доступа
+ */
+router.get('/:id', auth, getTaskById);
 
 module.exports = router;
