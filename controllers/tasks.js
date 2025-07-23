@@ -183,6 +183,23 @@ const uploadTaskFile = async (req, res) => {
   }
 };
 
+const searchTasks = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.trim() === '') {
+      return res.status(400).json({ message: 'Необходимо указать поисковый запрос (q)' });
+    }
+    // Поиск только среди задач, к которым пользователь имеет доступ
+    const query = `SELECT * FROM tasks WHERE (created_by = ? OR assigned_to = ?) AND (title LIKE ? OR description LIKE ?)`;
+    const likeQ = `%${q}%`;
+    const params = [req.userId, req.userId, likeQ, likeQ];
+    const [tasks] = await pool.query(query, params);
+    res.json(tasks);
+  } catch (error) {
+    res.status(500).json({ message: 'Ошибка поиска задач', error: error.message });
+  }
+};
+
 module.exports = {
   getAllTasks,
   createTask,
@@ -190,5 +207,6 @@ module.exports = {
   deleteTask,
   getTaskHistory,
   getTaskFiles,
-  uploadTaskFile
+  uploadTaskFile,
+  searchTasks // добавляем экспорт
 };

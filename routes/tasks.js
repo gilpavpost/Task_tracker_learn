@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middlewares/auth');
+const { auth } = require('../middlewares/auth');
 const {
   getAllTasks,
   createTask,
@@ -8,7 +8,8 @@ const {
   deleteTask,
   getTaskHistory,
   getTaskFiles,
-  uploadTaskFile
+  uploadTaskFile,
+  searchTasks
 } = require('../controllers/tasks');
 const multer = require('multer');
 const path = require('path');
@@ -248,5 +249,26 @@ router.get('/:taskId/files', auth, getTaskFiles);
  *         description: Файл загружен
  */
 router.post('/:taskId/files', auth, upload.single('file'), uploadTaskFile);
+
+/**
+ * @swagger
+ * /api/tasks/search:
+ *   get:
+ *     summary: Поиск задач по тексту (title, description)
+ *     tags: [Tasks]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Поисковый запрос
+ *     responses:
+ *       200:
+ *         description: Список найденных задач
+ */
+router.get('/search', auth, searchTasks);
 
 module.exports = router;
