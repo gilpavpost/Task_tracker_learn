@@ -39,15 +39,14 @@ CREATE TABLE IF NOT EXISTS tasks (
     id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(100) NOT NULL,
     description TEXT,
-    status ENUM('todo', 'in_progress', 'done') DEFAULT 'todo',
+    status ENUM('todo', 'in_progress', 'done', 'frozen') DEFAULT 'todo',
     priority ENUM('low', 'medium', 'high') DEFAULT 'medium',
     due_date DATE,
+    estimated_hours DECIMAL(5,2), -- планируемое время в часах
     project_id INT,
-    assigned_to INT, -- теперь допускает NULL
     created_by INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
-    FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -91,8 +90,29 @@ CREATE TABLE IF NOT EXISTS task_files (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
+-- Таблица исполнителей задачи (многие ко многим)
+CREATE TABLE IF NOT EXISTS task_assignees (
+    task_id INT NOT NULL,
+    user_id INT NOT NULL,
+    PRIMARY KEY (task_id, user_id),
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Таблица трекинга времени по задачам
+CREATE TABLE IF NOT EXISTS task_time_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    task_id INT NOT NULL,
+    user_id INT NOT NULL,
+    log_date DATE NOT NULL,
+    hours DECIMAL(5,2) NOT NULL,
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Создание индексов для оптимизации
 CREATE INDEX idx_tasks_project_id ON tasks(project_id);
-CREATE INDEX idx_tasks_assigned_to ON tasks(assigned_to);
 CREATE INDEX idx_tasks_created_by ON tasks(created_by);
 CREATE INDEX idx_projects_created_by ON projects(created_by); 

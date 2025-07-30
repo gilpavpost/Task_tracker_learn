@@ -1,17 +1,23 @@
 const pool = require('../config/db');
 const path = require('path');
 
+// Новый импорт для работы с массивами
+const uniq = arr => [...new Set(arr)];
+
 const getAllTasks = async (req, res) => {
   try {
     const { status, assigned_to, project_id, due_from, due_to } = req.query;
-    let query = `SELECT t.*, u.username as assigned_to_username FROM tasks t LEFT JOIN users u ON t.assigned_to = u.id WHERE (t.created_by = ? OR t.assigned_to = ?)`;
+    let query = `SELECT t.*, GROUP_CONCAT(ta.user_id) as assignees
+                 FROM tasks t
+                 LEFT JOIN task_assignees ta ON t.id = ta.task_id
+                 WHERE (t.created_by = ? OR ta.user_id = ?)`;
     const params = [req.userId, req.userId];
     if (status) {
       query += ' AND t.status = ?';
       params.push(status);
     }
     if (assigned_to) {
-      query += ' AND t.assigned_to = ?';
+      query += ' AND ta.user_id = ?';
       params.push(assigned_to);
     }
     if (project_id) {
@@ -26,7 +32,10 @@ const getAllTasks = async (req, res) => {
       query += ' AND t.due_date <= ?';
       params.push(due_to);
     }
+    query += ' GROUP BY t.id';
     const [tasks] = await pool.query(query, params);
+    // assignees как массив чисел
+    tasks.forEach(t => t.assignees = t.assignees ? t.assignees.split(',').map(Number) : []);
     res.json(tasks);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching tasks', error: error.message });
@@ -35,18 +44,20 @@ const getAllTasks = async (req, res) => {
 
 const createTask = async (req, res) => {
   try {
-    const { title, description, project_id, assigned_to, priority, due_date } = req.body;
-    
+    const { title, description, project_id, assignees, priority, due_date, status, estimated_hours } = req.body;
     const [result] = await pool.query(
-      'INSERT INTO tasks (title, description, project_id, created_by, assigned_to, priority, due_date) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [title, description, project_id, req.userId, assigned_to, priority, due_date]
+      'INSERT INTO tasks (title, description, project_id, created_by, priority, due_date, status, estimated_hours) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [title, description, project_id, req.userId, priority, due_date, status || 'todo', estimated_hours]
     );
-    
-    const [task] = await pool.query(
-      'SELECT * FROM tasks WHERE id = ?',
-      [result.insertId]
-    );
-    
+    const taskId = result.insertId;
+    // Добавляем исполнителей
+    if (Array.isArray(assignees) && assignees.length > 0) {
+      const values = uniq(assignees).map(uid => [taskId, uid]);
+      await pool.query('INSERT INTO task_assignees (task_id, user_id) VALUES ?', [values]);
+    }
+    const [task] = await pool.query('SELECT * FROM tasks WHERE id = ?', [taskId]);
+    const [assigned] = await pool.query('SELECT user_id FROM task_assignees WHERE task_id = ?', [taskId]);
+    task[0].assignees = assigned.map(a => a.user_id);
     res.status(201).json(task[0]);
   } catch (error) {
     res.status(500).json({ message: 'Error creating task', error: error.message });
@@ -56,59 +67,30 @@ const createTask = async (req, res) => {
 const updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, assigned_to, priority, due_date, status } = req.body;
-    
-    // Check if user owns the task or is assigned to it
+    const { title, description, assignees, priority, due_date, status, estimated_hours } = req.body;
+    // Проверка доступа
     const [existingTaskArr] = await pool.query(
-      'SELECT * FROM tasks WHERE id = ? AND (created_by = ? OR assigned_to = ?)',
-      [id, req.userId, req.userId]
+      'SELECT * FROM tasks WHERE id = ?', [id]
     );
-    
     if (existingTaskArr.length === 0) {
       return res.status(404).json({ message: 'Task not found or access denied' });
     }
-    const existingTask = existingTaskArr[0];
-
-    // Сравниваем поля и логируем изменения
-    const changes = [];
-    if (title !== undefined && title !== existingTask.title) {
-      changes.push({ field: 'title', old_value: existingTask.title, new_value: title });
-    }
-    if (description !== undefined && description !== existingTask.description) {
-      changes.push({ field: 'description', old_value: existingTask.description, new_value: description });
-    }
-    if (assigned_to !== undefined && assigned_to != existingTask.assigned_to) {
-      changes.push({ field: 'assigned_to', old_value: existingTask.assigned_to, new_value: assigned_to });
-    }
-    if (priority !== undefined && priority !== existingTask.priority) {
-      changes.push({ field: 'priority', old_value: existingTask.priority, new_value: priority });
-    }
-    if (due_date !== undefined && String(due_date) !== String(existingTask.due_date)) {
-      changes.push({ field: 'due_date', old_value: existingTask.due_date, new_value: due_date });
-    }
-    if (status !== undefined && status !== existingTask.status) {
-      changes.push({ field: 'status', old_value: existingTask.status, new_value: status });
-    }
-
     // Обновляем задачу
     await pool.query(
-      'UPDATE tasks SET title = ?, description = ?, assigned_to = ?, priority = ?, due_date = ?, status = ? WHERE id = ?',
-      [title, description, assigned_to, priority, due_date, status, id]
+      'UPDATE tasks SET title = ?, description = ?, priority = ?, due_date = ?, status = ?, estimated_hours = ? WHERE id = ?',
+      [title, description, priority, due_date, status, estimated_hours, id]
     );
-
-    // Логируем изменения в task_history
-    for (const change of changes) {
-      await pool.query(
-        'INSERT INTO task_history (task_id, user_id, field, old_value, new_value) VALUES (?, ?, ?, ?, ?)',
-        [id, req.userId, change.field, String(change.old_value), String(change.new_value)]
-      );
+    // Обновляем исполнителей
+    if (Array.isArray(assignees)) {
+      await pool.query('DELETE FROM task_assignees WHERE task_id = ?', [id]);
+      if (assignees.length > 0) {
+        const values = uniq(assignees).map(uid => [id, uid]);
+        await pool.query('INSERT INTO task_assignees (task_id, user_id) VALUES ?', [values]);
+      }
     }
-
-    const [updatedTask] = await pool.query(
-      'SELECT * FROM tasks WHERE id = ?',
-      [id]
-    );
-    
+    const [updatedTask] = await pool.query('SELECT * FROM tasks WHERE id = ?', [id]);
+    const [assigned] = await pool.query('SELECT user_id FROM task_assignees WHERE task_id = ?', [id]);
+    updatedTask[0].assignees = assigned.map(a => a.user_id);
     res.json(updatedTask[0]);
   } catch (error) {
     res.status(500).json({ message: 'Error updating task', error: error.message });
@@ -219,6 +201,55 @@ const getTaskById = async (req, res) => {
   }
 };
 
+// Новый эндпоинт: логирование времени по задаче
+const logTaskTime = async (req, res) => {
+  try {
+    const { task_id, log_date, hours, comment } = req.body;
+    // Проверка: пользователь должен быть исполнителем задачи
+    const [assignee] = await pool.query('SELECT * FROM task_assignees WHERE task_id = ? AND user_id = ?', [task_id, req.userId]);
+    if (assignee.length === 0) {
+      return res.status(403).json({ message: 'You are not assigned to this task' });
+    }
+    await pool.query(
+      'INSERT INTO task_time_logs (task_id, user_id, log_date, hours, comment) VALUES (?, ?, ?, ?, ?)',
+      [task_id, req.userId, log_date, hours, comment]
+    );
+    res.status(201).json({ message: 'Time logged' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error logging time', error: error.message });
+  }
+};
+
+// Новый эндпоинт: сводка по пользователю за месяц
+const getUserTimeSummary = async (req, res) => {
+  try {
+    const { user_id, year, month } = req.query;
+    const uid = user_id || req.userId;
+    const [rows] = await pool.query(
+      `SELECT t.id as task_id, t.title, l.log_date, l.hours, l.comment
+       FROM task_time_logs l
+       JOIN tasks t ON l.task_id = t.id
+       WHERE l.user_id = ? AND YEAR(l.log_date) = ? AND MONTH(l.log_date) = ?
+       ORDER BY l.log_date ASC, t.title ASC`,
+      [uid, year, month]
+    );
+    // Группируем по дате
+    const summary = {};
+    for (const row of rows) {
+      if (!summary[row.log_date]) summary[row.log_date] = [];
+      summary[row.log_date].push({
+        task_id: row.task_id,
+        title: row.title,
+        hours: row.hours,
+        comment: row.comment
+      });
+    }
+    res.json(summary);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching summary', error: error.message });
+  }
+};
+
 module.exports = {
   getAllTasks,
   createTask,
@@ -227,6 +258,8 @@ module.exports = {
   getTaskHistory,
   getTaskFiles,
   uploadTaskFile,
-  searchTasks, // добавляем экспорт
-  getTaskById // добавляем экспорт
+  searchTasks,
+  getTaskById,
+  logTaskTime,
+  getUserTimeSummary
 };

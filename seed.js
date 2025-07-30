@@ -1,47 +1,53 @@
 const pool = require('./config/db');
 const bcrypt = require('bcryptjs');
+const { faker } = require('@faker-js/faker');
 
 const seedDatabase = async () => {
   try {
     console.log('Начинаем заполнение базы данных моковыми данными...');
 
-    // Очищаем таблицы (сначала tasks, потом projects, потом users)
+    // Очищаем таблицы (в правильном порядке)
+    await pool.query('DELETE FROM task_time_logs');
+    await pool.query('DELETE FROM task_assignees');
     await pool.query('DELETE FROM tasks');
     await pool.query('DELETE FROM projects');
     await pool.query('DELETE FROM users');
 
-    // Создание пользователей
+    // 1. Пользователи (10+)
     const hashedPassword = await bcrypt.hash('password123', 10);
-    
+    const roles = ['admin', 'user', 'manager'];
     const users = [
-      { username: 'admin', email: 'admin@example.com', password: hashedPassword },
-      { username: 'john_doe', email: 'john@example.com', password: hashedPassword },
-      { username: 'jane_smith', email: 'jane@example.com', password: hashedPassword },
-      { username: 'mike_wilson', email: 'mike@example.com', password: hashedPassword },
-      { username: 'sarah_jones', email: 'sarah@example.com', password: hashedPassword }
+      { username: 'admin', email: 'admin@example.com', password: hashedPassword, role: 'admin' },
+      { username: 'john_ceo', email: 'john.ceo@company.com', password: hashedPassword, role: 'manager' },
+      { username: 'jane_hr', email: 'jane.hr@company.com', password: hashedPassword, role: 'manager' },
+      { username: 'mike_dev', email: 'mike.dev@company.com', password: hashedPassword, role: 'user' },
+      { username: 'sarah_pm', email: 'sarah.pm@company.com', password: hashedPassword, role: 'manager' },
+      { username: 'alex_designer', email: 'alex.designer@company.com', password: hashedPassword, role: 'user' },
+      { username: 'olga_tester', email: 'olga.tester@company.com', password: hashedPassword, role: 'user' },
+      { username: 'ivan_dev', email: 'ivan.dev@company.com', password: hashedPassword, role: 'user' },
+      { username: 'lisa_marketing', email: 'lisa.marketing@company.com', password: hashedPassword, role: 'user' },
+      { username: 'peter_support', email: 'peter.support@company.com', password: hashedPassword, role: 'user' },
+      { username: 'nina_finance', email: 'nina.finance@company.com', password: hashedPassword, role: 'user' }
     ];
-
     console.log('Добавляем пользователей...');
     for (const user of users) {
       await pool.query(
-        'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-        [user.username, user.email, user.password]
+        'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
+        [user.username, user.email, user.password, user.role]
       );
     }
-
-    // Получаем ID пользователей для создания проектов и задач
-    const [userRows] = await pool.query('SELECT id FROM users');
+    const [userRows] = await pool.query('SELECT id, username FROM users');
     const userIds = userRows.map(row => row.id);
 
-    // Создание проектов
+    // 2. Проекты (5-7)
     const projects = [
-      { name: 'Веб-приложение TaskTracker', description: 'Разработка системы управления задачами', created_by: userIds[0] },
-      { name: 'Мобильное приложение', description: 'Создание мобильной версии приложения', created_by: userIds[1] },
-      { name: 'API документация', description: 'Написание документации для API', created_by: userIds[2] },
-      { name: 'Тестирование системы', description: 'Комплексное тестирование всех функций', created_by: userIds[0] },
-      { name: 'UI/UX дизайн', description: 'Улучшение пользовательского интерфейса', created_by: userIds[3] }
+      { name: 'TaskTracker Core', description: 'Backend и бизнес-логика', created_by: userIds[1] },
+      { name: 'TaskTracker Frontend', description: 'React SPA', created_by: userIds[3] },
+      { name: 'HR Automation', description: 'Автоматизация HR-процессов', created_by: userIds[2] },
+      { name: 'Mobile App', description: 'Мобильное приложение для сотрудников', created_by: userIds[4] },
+      { name: 'Marketing Website', description: 'Промо-сайт компании', created_by: userIds[8] },
+      { name: 'Support Portal', description: 'Портал поддержки клиентов', created_by: userIds[9] }
     ];
-
     console.log('Добавляем проекты...');
     for (const project of projects) {
       await pool.query(
@@ -49,143 +55,78 @@ const seedDatabase = async () => {
         [project.name, project.description, project.created_by]
       );
     }
-
-    // Получаем ID проектов
     const [projectRows] = await pool.query('SELECT id FROM projects');
     const projectIds = projectRows.map(row => row.id);
 
-    // Создание задач
-    const tasks = [
-      {
-        title: 'Настройка базы данных',
-        description: 'Создать схему базы данных и настроить подключение',
-        project_id: projectIds[0],
-        created_by: userIds[0],
-        assigned_to: userIds[1],
-        priority: 'high',
-        status: 'in_progress',
-        due_date: '2024-02-15'
-      },
-      {
-        title: 'Создание API endpoints',
-        description: 'Реализовать основные API endpoints для CRUD операций',
-        project_id: projectIds[0],
-        created_by: userIds[0],
-        assigned_to: userIds[2],
-        priority: 'high',
-        status: 'todo',
-        due_date: '2024-02-20'
-      },
-      {
-        title: 'Аутентификация пользователей',
-        description: 'Реализовать систему регистрации и входа',
-        project_id: projectIds[0],
-        created_by: userIds[0],
-        assigned_to: userIds[3],
-        priority: 'medium',
-        status: 'done',
-        due_date: '2024-02-10'
-      },
-      {
-        title: 'Фронтенд компоненты',
-        description: 'Создать React компоненты для интерфейса',
-        project_id: projectIds[1],
-        created_by: userIds[1],
-        assigned_to: userIds[4],
-        priority: 'medium',
-        status: 'in_progress',
-        due_date: '2024-02-25'
-      },
-      {
-        title: 'Настройка навигации',
-        description: 'Реализовать роутинг и навигацию в приложении',
-        project_id: projectIds[1],
-        created_by: userIds[1],
-        assigned_to: userIds[0],
-        priority: 'low',
-        status: 'todo',
-        due_date: '2024-03-01'
-      },
-      {
-        title: 'Написание README',
-        description: 'Создать подробную документацию проекта',
-        project_id: projectIds[2],
-        created_by: userIds[2],
-        assigned_to: userIds[2],
-        priority: 'medium',
-        status: 'done',
-        due_date: '2024-02-12'
-      },
-      {
-        title: 'Примеры использования API',
-        description: 'Создать примеры запросов и ответов',
-        project_id: projectIds[2],
-        created_by: userIds[2],
-        assigned_to: userIds[1],
-        priority: 'low',
-        status: 'todo',
-        due_date: '2024-02-28'
-      },
-      {
-        title: 'Unit тесты',
-        description: 'Написать unit тесты для всех функций',
-        project_id: projectIds[3],
-        created_by: userIds[0],
-        assigned_to: userIds[4],
-        priority: 'high',
-        status: 'in_progress',
-        due_date: '2024-02-18'
-      },
-      {
-        title: 'Integration тесты',
-        description: 'Создать integration тесты для API',
-        project_id: projectIds[3],
-        created_by: userIds[0],
-        assigned_to: userIds[2],
-        priority: 'medium',
-        status: 'todo',
-        due_date: '2024-02-22'
-      },
-      {
-        title: 'Дизайн главной страницы',
-        description: 'Создать макет главной страницы приложения',
-        project_id: projectIds[4],
-        created_by: userIds[3],
-        assigned_to: userIds[3],
-        priority: 'high',
-        status: 'done',
-        due_date: '2024-02-08'
-      },
-      {
-        title: 'Адаптивный дизайн',
-        description: 'Обеспечить корректное отображение на мобильных устройствах',
-        project_id: projectIds[4],
-        created_by: userIds[3],
-        assigned_to: userIds[4],
-        priority: 'medium',
-        status: 'in_progress',
-        due_date: '2024-02-29'
-      }
-    ];
-
+    // 3. Задачи (20+), разные статусы, estimated_hours, массивы исполнителей
+    const statuses = ['todo', 'in_progress', 'done', 'frozen'];
+    const priorities = ['low', 'medium', 'high'];
+    const tasks = [];
+    for (let i = 0; i < 22; i++) {
+      const project_id = faker.random.arrayElement(projectIds);
+      const created_by = faker.random.arrayElement(userIds);
+      const status = faker.random.arrayElement(statuses);
+      const priority = faker.random.arrayElement(priorities);
+      const estimated_hours = faker.random.number({ min: 4, max: 40 });
+      const due_date = faker.date.between('2024-03-01', '2024-04-30');
+      const title = faker.company.bs();
+      const description = faker.lorem.sentence();
+      tasks.push({
+        title,
+        description,
+        project_id,
+        created_by,
+        priority,
+        status,
+        due_date: due_date.toISOString().slice(0, 10),
+        estimated_hours
+      });
+    }
     console.log('Добавляем задачи...');
     for (const task of tasks) {
       await pool.query(
-        'INSERT INTO tasks (title, description, project_id, created_by, assigned_to, priority, status, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [task.title, task.description, task.project_id, task.created_by, task.assigned_to, task.priority, task.status, task.due_date]
+        'INSERT INTO tasks (title, description, project_id, created_by, priority, status, due_date, estimated_hours) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [task.title, task.description, task.project_id, task.created_by, task.priority, task.status, task.due_date, task.estimated_hours]
       );
     }
+    const [taskRows] = await pool.query('SELECT id FROM tasks');
+    const taskIds = taskRows.map(row => row.id);
 
-    console.log('✅ База данных успешно заполнена моковыми данными!');
+    // 4. Назначения исполнителей (2-4 на задачу)
+    console.log('Назначаем исполнителей задач...');
+    for (const taskId of taskIds) {
+      const assignees = faker.helpers.shuffle(userIds).slice(0, faker.random.number({ min: 2, max: 4 }));
+      for (const userId of assignees) {
+        await pool.query('INSERT INTO task_assignees (task_id, user_id) VALUES (?, ?)', [taskId, userId]);
+      }
+    }
+
+    // 5. Логи времени (task_time_logs) — для части задач, разные пользователи, даты, комментарии
+    console.log('Генерируем логи времени...');
+    for (const taskId of taskIds.slice(0, 15)) { // только для части задач
+      const days = faker.random.number({ min: 2, max: 6 });
+      const assignees = (await pool.query('SELECT user_id FROM task_assignees WHERE task_id = ?', [taskId]))[0].map(r => r.user_id);
+      for (let d = 0; d < days; d++) {
+        const log_date = faker.date.between('2024-03-01', '2024-04-30').toISOString().slice(0, 10);
+        const user_id = faker.random.arrayElement(assignees);
+        const hours = faker.random.number({ min: 1, max: 8 });
+        const comment = faker.hacker.phrase();
+        await pool.query(
+          'INSERT INTO task_time_logs (task_id, user_id, log_date, hours, comment) VALUES (?, ?, ?, ?, ?)',
+          [taskId, user_id, log_date, hours, comment]
+        );
+      }
+    }
+
+    console.log('✅ База данных успешно заполнена разнообразными моковыми данными!');
     console.log('\n📊 Статистика:');
     console.log(`- Пользователей: ${users.length}`);
     console.log(`- Проектов: ${projects.length}`);
     console.log(`- Задач: ${tasks.length}`);
-    
+    console.log(`- Назначений: ~${tasks.length * 3}`);
+    console.log(`- Логов времени: ~${15 * 4}`);
     console.log('\n🔑 Тестовые учетные данные:');
-    console.log('Email: admin@example.com, Password: password123');
-    console.log('Email: john@example.com, Password: password123');
-    console.log('Email: jane@example.com, Password: password123');
+    users.slice(0, 5).forEach(u => console.log(`Email: ${u.email}, Password: password123`));
 
   } catch (error) {
     console.error('❌ Ошибка при заполнении базы данных:', error);

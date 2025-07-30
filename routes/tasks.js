@@ -10,7 +10,9 @@ const {
   getTaskFiles,
   uploadTaskFile,
   searchTasks,
-  getTaskById
+  getTaskById,
+  logTaskTime,
+  getUserTimeSummary
 } = require('../controllers/tasks');
 const multer = require('multer');
 const path = require('path');
@@ -294,5 +296,10 @@ router.get('/search', auth, searchTasks);
  *         description: Задача не найдена или нет доступа
  */
 router.get('/:id', auth, getTaskById);
+
+// Логирование времени по задаче
+router.post('/log-time', auth, logTaskTime);
+// Сводка по пользователю за месяц
+router.get('/user-time-summary', auth, getUserTimeSummary);
 
 module.exports = router;
